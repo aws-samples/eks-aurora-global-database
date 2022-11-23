@@ -1,0 +1,4 @@
+start_docker.sh
+env
+*.pyc
+__pycache__
