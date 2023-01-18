@@ -710,7 +710,7 @@ Resources:
             - ec2:DisassociateIamInstanceProfile
             - iam:ListInstanceProfiles
             - iam:PassRole
-            Resource: arn:aws:*
+            Resource: "*"
 
   C9BootstrapInstanceLambda:
     Description: Bootstrap Cloud9 instance

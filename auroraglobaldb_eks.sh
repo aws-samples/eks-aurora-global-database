@@ -230,6 +230,7 @@ function deploy_vpc_c9()
 
     aws cloudformation create-stack \
          --stack-name EKSGDB1 \
+         --disable-rollback \
          --template-body file://${CFN_VPC_C9} \
          --tags Key=Environment,Value=EKSGDB \
          --timeout-in-minutes=30 \
