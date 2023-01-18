@@ -392,7 +392,6 @@ Resources:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
       Description: Allow all outcoming traffic from other worker nodes
-      CidrIp: "0.0.0.0/0"
       GroupId: !Ref WorkerNodesSecurityGroup
       DestinationSecurityGroupId: !Ref WorkerNodesSecurityGroup
       IpProtocol: "-1"
