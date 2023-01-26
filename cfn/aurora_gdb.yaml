@@ -1,0 +1,149 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation Template to create Aurora Postgresql Cluster DB Instance'
+
+###############################################################################
+# Parameters
+###############################################################################
+
+Parameters:
+
+  R2Stack:
+    Description: 'Provide Stack name of Region 2 Aurora VPC stack based on VPC-3AZs yaml template. Refer Cloudformation dashboard in AWS Console to get this.'
+    Type: String
+    MinLength: '1'
+    MaxLength: '128'
+    AllowedPattern: '^[a-zA-Z]+[0-9a-zA-Z\-]*$'
+    Default: "EKSGDB1"
+
+  GlobalDBClusterIdentifier:
+    Description: Aurora Database Global Cluster Identifier
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: "^[a-zA-Z]+[0-9a-zA-Z_]*$"
+    ConstraintDescription: Must start with a letter. Only numbers, letters, and _ accepted. max length 64 characters
+    Default: agdbtest
+
+  DBClusterIdentifier:
+    Description: Aurora Database Cluster Identifier
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: "^[a-zA-Z]+[0-9a-zA-Z_]*$"
+    ConstraintDescription: Must start with a letter. Only numbers, letters, and _ accepted. max length 64 characters
+    Default: adbtest
+
+  SourceRegion:
+    Description: Aurora Database Cluster Source Region
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: "^[a-zA-Z]+[0-9a-zA-Z-]*$"
+    ConstraintDescription: Must start with a letter. Only numbers, letters, and - accepted. max length 64 characters
+    Default: us-east-2
+
+  DBInstanceClass:
+    Default: db.r5.large
+    Description: Database Instance Class. db.r5 instance classes are supported for Aurora PostgreSQL 10.6 or later. db.t3.medium instance class is supported for Aurora PostgreSQL 10.7 or later.
+    Type: String
+    AllowedValues:
+    - db.r5.large
+    - db.r5.xlarge
+    - db.r5.2xlarge
+    - db.r5.4xlarge
+    - db.r5.8xlarge
+    - db.r5.12xlarge
+    - db.r5.16xlarge
+    - db.r5.24xlarge
+
+  DBEngineVersion:
+    Description: Select Database Engine Version
+    Type: String
+    Default: 13.3
+    AllowedValues:
+      - 10.16
+      - 10.17
+      - 11.11
+      - 11.12
+      - 12.6
+      - 12.7
+      - 13.3
+
+  Application:
+    Description: 'Specify Application Name'
+    Type: String
+    Default: 'EKSAURGDB'
+
+  DBPort:
+    Description: TCP/IP Port for the Database Instance
+    Type: Number
+    Default: 5432
+    ConstraintDescription: 'Must be in the range [1115-65535]'
+    MinValue: 1115
+    MaxValue: 65535
+
+Resources:
+
+  AuroraKMSCMKAlias:
+    Type: 'AWS::KMS::Alias'
+    DeletionPolicy: Delete
+    DependsOn: AuroraDBCluster
+    Properties:
+      AliasName: !Sub 'alias/${AuroraDBCluster}9'
+      TargetKeyId: {'Fn::ImportValue': !Sub '${R2Stack}-AuroraKMSCMK'}
+
+  SecretAuroraClusterAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: {'Fn::ImportValue': !Sub '${R2Stack}-AuroraMasterSecret'}
+      TargetId: !Ref AuroraDBCluster
+      TargetType: AWS::RDS::DBCluster
+
+
+  AuroraDBCluster:
+    Type: AWS::RDS::DBCluster
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DBClusterIdentifier: !Ref DBClusterIdentifier
+      Engine: aurora-postgresql
+      EngineVersion: !Ref DBEngineVersion
+      GlobalClusterIdentifier: !Ref GlobalDBClusterIdentifier
+      Port: !Ref DBPort
+      DBSubnetGroupName: {'Fn::ImportValue': !Sub '${R2Stack}-DBSubnetGroup'}
+      SourceRegion: !Ref SourceRegion
+      VpcSecurityGroupIds:
+      - {'Fn::ImportValue': !Sub '${R2Stack}-ClusterSecurityGroup'}
+      BackupRetentionPeriod: 1
+      StorageEncrypted: true
+      KmsKeyId: {'Fn::ImportValue': !Sub '${R2Stack}-AuroraKMSCMK'}
+      Tags:
+        -
+          Key: Application
+          Value: !Ref Application
+
+  AuroraDBFirstInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      CopyTagsToSnapshot: true
+      DBInstanceClass:
+        Ref: DBInstanceClass
+      DBClusterIdentifier: !Ref AuroraDBCluster
+      DBSubnetGroupName: {'Fn::ImportValue': !Sub '${R2Stack}-DBSubnetGroup'}
+      Engine: aurora-postgresql
+      
+Outputs:
+
+  ClusterEndpoint:
+    Description: 'Aurora Cluster/Writer Endpoint'
+    Value: !GetAtt 'AuroraDBCluster.Endpoint.Address'
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}-AuroraClusterEndPoint'
+
+  ClusterIdentifier:
+    Description: 'Aurora Cluster Identifier'
+    Value: !Ref AuroraDBCluster
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}-AuroraClusterIdentifier'

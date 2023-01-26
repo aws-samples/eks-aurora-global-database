@@ -1,0 +1,109 @@
+version: '3'
+
+services:
+  postgresql:
+    image: postgres:15
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - PGDATA=/pgdata
+    volumes:
+      - ./sql/setup_schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./pgdata:/pgdata
+
+  webapp:
+    depends_on:
+      - postgresql
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    image: webapp:1.0
+    ports:
+      - 8443:8443
+    volumes:
+      - ./appdata:/appdata
+    environment:
+      - DATABASE_HOST=host.docker.internal
+      - DATABASE_RO_HOST=host.docker.internal
+      - DATABASE_PORT=5432
+      - DATABASE_USER=dbuser1
+      - DATABASE_PASSWORD=eksgdbdemo
+      - DATABASE_DB_NAME=eksgdbdemo
+      - DATABASE_RODB_NAME=eksgdbdemo
+      - PRODUCTS_SERVICE=http://host.docker.internal:8444
+      - USER_SERVICE=http://host.docker.internal:8446
+      - ORDER_SERVICE=http://host.docker.internal:8448
+      - KART_SERVICE=http://host.docker.internal:8445
+
+  product:
+    depends_on:
+      - postgresql
+    build:
+      context: ./product
+      dockerfile: Dockerfile
+    image: product:1.0
+    ports:
+      - 8444:8444
+    environment:
+      - DATABASE_HOST=host.docker.internal
+      - DATABASE_RO_HOST=host.docker.internal
+      - DATABASE_PORT=5432
+      - DATABASE_USER=dbuser1
+      - DATABASE_PASSWORD=eksgdbdemo
+      - DATABASE_DB_NAME=eksgdbdemo
+      - DATABASE_RODB_NAME=eksgdbdemo
+
+  user:
+    depends_on:
+      - postgresql
+    build:
+      context: ./user
+      dockerfile: Dockerfile
+    image: user:1.0
+    ports:
+      - 8446:8446
+    environment:
+      - DATABASE_HOST=host.docker.internal
+      - DATABASE_RO_HOST=host.docker.internal
+      - DATABASE_PORT=5432
+      - DATABASE_USER=dbuser1
+      - DATABASE_PASSWORD=eksgdbdemo
+      - DATABASE_DB_NAME=eksgdbdemo
+      - DATABASE_RODB_NAME=eksgdbdemo
+
+  order:
+    depends_on:
+      - postgresql
+    build:
+      context: ./order
+      dockerfile: Dockerfile
+    image: order:1.0
+    ports:
+      - 8448:8448
+    environment:
+      - DATABASE_HOST=host.docker.internal
+      - DATABASE_RO_HOST=host.docker.internal
+      - DATABASE_PORT=5432
+      - DATABASE_USER=dbuser1
+      - DATABASE_PASSWORD=eksgdbdemo
+      - DATABASE_DB_NAME=eksgdbdemo
+
+  kart:
+    depends_on:
+      - postgresql
+    build:
+      context: ./kart
+      dockerfile: Dockerfile
+    image: kart:1.0
+    ports:
+      - 8445:8445
+    environment:
+      - DATABASE_HOST=host.docker.internal
+      - DATABASE_RO_HOST=host.docker.internal
+      - DATABASE_PORT=5432
+      - DATABASE_USER=dbuser1
+      - DATABASE_PASSWORD=eksgdbdemo
+      - DATABASE_DB_NAME=eksgdbdemo
+      - DATABASE_RODB_NAME=eksgdbdemo

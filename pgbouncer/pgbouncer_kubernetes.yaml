@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: retailapp
+  labels:
+    app: retailapp
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pgbconfig
+  namespace: retailapp
+type: Opaque
+data:
+  userlist.txt: %userlisttxt%
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgbconfig
+  namespace: retailapp
+data:
+  pgbouncer.ini: |
+    %pgbouncerini%
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer-deployment
+  namespace: retailapp
+  labels:
+    app: pgbouncer
+spec:
+  replicas: 2
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: pgbouncer
+  template:
+    metadata:
+      labels:
+        app: pgbouncer
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: pgbouncer
+        image: %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com/retailapp/pgbouncer:1.17.0
+        ports:
+         - containerPort: 6432
+        volumeMounts:
+         - name: pgbconfigmap
+           subPath: pgbouncer.ini
+           mountPath: /etc/pgbouncer/pgbouncer.ini
+           readOnly: true
+         - name: pgbconfig
+           subPath: userlist.txt
+           mountPath: /etc/pgbouncer/userlist.txt
+           readOnly: true
+      volumes:
+        - name: pgbconfig
+          secret:
+            secretName: pgbconfig
+        - name: pgbconfigmap
+          configMap:
+            name: pgbconfig
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: retailapp-pgb
+  namespace: retailapp
+  labels:
+    app: pgbouncer-service
+spec:
+  type: ClusterIP
+  selector:
+    app: pgbouncer
+  ports:
+    - name: pgbouncer
+      protocol: TCP
+      port: 6432
+      targetPort: 6432
+---
