@@ -104,6 +104,10 @@ for role in `aws iam list-roles --query 'Roles[?starts_with(RoleName, \`auroragd
 do
  aws iam delete-role --role-name $role
 done
+for role in `aws iam list-roles --query 'Roles[?starts_with(RoleName, \`aurorapgbouncerlambda\`) == \`true\`].RoleName' --region $REGION1 --output text`
+do
+ aws iam delete-role --role-name $role
+done
 
 aws iam delete-policy --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerAdditionalIAMPolicy
 aws iam delete-policy --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy
