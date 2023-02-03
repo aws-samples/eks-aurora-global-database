@@ -20,6 +20,20 @@ function wait_for_stack_to_complete()
    done
 }  
 
+function delete_policies()
+{
+ role=${1}
+ for pol in `aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[].PolicyArn' --output text`
+ do
+   aws iam detach-role-policy --role-name $role --policy-arn $pol
+ done
+ for pol in `aws iam list-role-policies --role-name $role --query 'PolicyNames' --output text`
+ do
+   aws iam delete-role-policy --role-name $role --policy-name $pol
+ done
+}
+
+
 #delete global accelerator
 accel=$(aws globalaccelerator list-accelerators --region us-west-2 --query 'Accelerators[?(Name == `eksgdb`)].AcceleratorArn' --output text)
 lsnrarn=$(aws globalaccelerator list-listeners --accelerator-arn  $accel --region us-west-2 --query 'Listeners[].ListenerArn' --output text)
@@ -76,14 +90,16 @@ PRIMARN=$(aws rds describe-global-clusters --query 'GlobalClusters[?(GlobalClust
 PRIMREGION=`echo $PRIMARN | awk -F: '{print $4}'`
 GLCLUIDE=agdbtest
 
+if [[ -n "${PRIMREGION}" && -n "${REGION2}" ]]; then
 if [[ "${PRIMREGION}" == "${REGION2}" ]]; then
    aws rds failover-global-cluster \
      --region $PRIMREGION \
      --global-cluster-identifier agdbtest \
      --target-db-cluster-identifier ${FAILARN}
+   sleep 300
+fi
 fi
 
-sleep 300
 
 aws cloudformation delete-stack --stack-name EKSGDB2 --region ${REGION2}
 wait_for_stack_to_complete "EKSGDB2" "${REGION2}"
@@ -94,31 +110,27 @@ aws events delete-rule --name AuroraGDBPgbouncerUpdate
 
 for role in `aws iam list-roles --query 'Roles[?starts_with(RoleName, \`auroragdbeks-ACKGrantsRole\`) == \`true\`].RoleName' --region $REGION1 --output text`
 do
+ delete_policies $role
  aws iam delete-role --role-name $role
 done
 for role in `aws iam list-roles --query 'Roles[?starts_with(RoleName, \`auroragdbeks-EKSIAMRole\`) == \`true\`].RoleName' --region $REGION1 --output text`
 do
+ delete_policies $role
  aws iam delete-role --role-name $role
 done
 for role in `aws iam list-roles --query 'Roles[?starts_with(RoleName, \`auroragdbeks-WorkerNodesRole\`) == \`true\`].RoleName' --region $REGION1 --output text`
 do
+ delete_policies $role
  aws iam delete-role --role-name $role
 done
 for role in `aws iam list-roles --query 'Roles[?starts_with(RoleName, \`aurorapgbouncerlambda\`) == \`true\`].RoleName' --region $REGION1 --output text`
 do
+ delete_policies $role
  aws iam delete-role --role-name $role
 done
 
-aws iam delete-policy --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerAdditionalIAMPolicy
 aws iam delete-policy --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy
-aws iam detach-role-policy --role-name aurorapgbouncerlambda --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-aws iam delete-role-policy --role-name aurorapgbouncerlambda --policy-name lambda_rds_policy
-aws iam delete-role --role-name aurorapgbouncerlambda
 
-for role in `aws iam list-roles --query 'Roles[?starts_with(RoleName, \`EKSGDB1-C9Role-\`) == \`true\`].RoleName' --region $REGION1 --output text`
-do
- aws iam delete-role --role-name $role
-done
 
 aws cloudformation delete-stack --stack-name auroragdbeks --region ${REGION2}
 wait_for_stack_to_complete "auroragdbeks" "${REGION2}"
@@ -136,3 +148,9 @@ aws cloudformation delete-stack --stack-name EKSGDB1 --region ${REGION2}
 wait_for_stack_to_complete "EKSGDB1" "${REGION2}"
 aws cloudformation delete-stack --stack-name EKSGDB1 --region ${REGION1}
 wait_for_stack_to_complete "EKSGDB1" "${REGION1}"
+
+for role in `aws iam list-roles --query 'Roles[?starts_with(RoleName, \`EKSGDB1-C9Role-\`) == \`true\`].RoleName' --region $REGION1 --output text`
+do
+ delete_policies $role
+ aws iam delete-role --role-name $role
+done
