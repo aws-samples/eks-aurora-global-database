@@ -443,7 +443,7 @@ function configure_pgb_lambda()
 
     aws iam attach-role-policy --role-name ${LAMBDA_ROLE} --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
-    aws iam put-role-policy --role-name ${LAMBDA_ROLE} --policy-name lambda_rds_policy --policy-document  '{"Version": "2012-10-17","Statement": [{ "Action": ["sts:GetCallerIdentity","eks:DescribeCluster","rds:DescribeDBClusters", "cloudformation:DescribeStacks"],"Effect": "Allow","Resource": "*"}]}'
+    aws iam put-role-policy --role-name ${LAMBDA_ROLE} --policy-name lambda_rds_policy --policy-document  '{"Version": "2012-10-17","Statement": [{ "Action": ["sts:GetCallerIdentity","eks:DescribeCluster","rds:DescribeDBClusters", "cloudformation:DescribeStacks", "cloudformation:ListStacks"],"Effect": "Allow","Resource": "*"}]}'
 
     lambda_role_arn=$(aws iam get-role --role-name ${LAMBDA_ROLE} | jq -r .Role.Arn)
     sleep 5
