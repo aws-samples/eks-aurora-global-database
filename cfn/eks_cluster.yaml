@@ -246,6 +246,8 @@ Resources:
                   print ("My event {}".format(event))
                   print("Eks cluster name {}".format(eks_cluster_name))
                   key_name = eks_cluster_name
+                  if event.get('RequestType') != 'Create':
+                     cfnresponse.send(event, context, status, data, key_name, noEcho=True)
                   try:
                     data['Arns'] = ack_permissions(eks_cluster_name)
                   except:
