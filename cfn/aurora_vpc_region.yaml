@@ -769,6 +769,9 @@ Resources:
               print('event: {}'.format(event))
               print('context: {}'.format(context))
               responseData = {}
+              if event.get('RequestType') != 'Create':
+                 responseData = {'Success': 'Skipping bootstrapping for instance: '+instance['InstanceId']}
+                 cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, 'CustomResourcePhysicalID')
               if event['RequestType'] == 'Create':
                   try:
                       # Open AWS clients
