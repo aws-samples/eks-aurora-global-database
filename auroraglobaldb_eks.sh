@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Please set env variables REGION1, REGION2 and run the script
+# REGION1 = Source Region
+# REGION2 = Target Region
+
 function print_line()
 {
     echo "---------------------------------"
@@ -644,12 +648,14 @@ function set_env()
     export EKS_STACK_NAME=auroragdbeks
     export INSTANCE_ROLE="C9Role"
     export EKS_NAMESPACE="kube-system"
-    export REGION1="us-east-2"
-    export REGION2="us-west-2"
     export CFN_VPC_C9=cfn/aurora_vpc_region.yaml
     export CFN_AURORADB=cfn/aurora_gdb.yaml
     if [ -z ${AWS_REGION} ] ; then
          export AWS_REGION=$(curl -s 169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')
+    fi
+    if [[ -z "${REGION1}" && -z "${REGION2}" ]]; then
+       echo "Please set variables for source Region REGION1 ${REGION1}, target Region REGION2 ${REGION2} variables and retry"
+       exit 1
     fi
     export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text) 
     export RETAILAPP_K8S=retailapp/eks/retailapp.yml

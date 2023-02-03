@@ -1,7 +1,9 @@
 #!/bin/bash
 
-REGION1=us-east-2
-REGION2=us-west-2
+if [[ -z "${REGION1}" && -z "${REGION2}" ]]; then
+ echo "Please set REGION1, REGION2 source and target Regions and retry"
+ exit 1
+fi
 
 function wait_for_stack_to_complete() 
 {           
@@ -9,10 +11,11 @@ function wait_for_stack_to_complete()
    region=${2}
    while [[ true ]]; do
      status=$(aws cloudformation describe-stacks --region ${region} --query "Stacks[?(StackName == '${stackname}')].StackStatus" --output text)
-     if [[ "${status}" == "CREATE_COMPLETE" ]]; then
+     if [[ -z "${status}" ]]; then
         echo "Stack ${stackname} on region ${region} completed (${status})"
         return
      fi
+     echo "${stackname} status ${status} in region ${region}"
      sleep 60
    done
 }  
@@ -39,9 +42,6 @@ aws globalaccelerator  delete-accelerator --accelerator-arn $accel --region us-w
 
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
 
-kubectl delete ingress,services,deployments,statefulsets -n retailapp --all
-kubectl delete ns retailapp --cascade=true
-
 eksctl delete iamserviceaccount --name aws-load-balancer-controller --cluster eksclu --namespace kube-system --region $REGION1
 eksctl delete iamserviceaccount --name aws-load-balancer-controller --cluster eksclu --namespace kube-system --region $REGION2
 eksctl delete cluster --name eksclu -r ${REGION1} --force -w
@@ -62,12 +62,12 @@ aws ec2 delete-vpc-peering-connection --vpc-peering-connection-id ${VPCPEERID} -
 # delete ECR Repos
 for REGION in $REGION1 $REGION2
 do
-aws ecr delete-repository  --repository-name retailapp/kart --force --region $REGION
-aws ecr delete-repository  --repository-name retailapp/order --force --region $REGION
-aws ecr delete-repository  --repository-name retailapp/pgbouncer --force --region $REGION
-aws ecr delete-repository  --repository-name retailapp/product --force --region $REGION
-aws ecr delete-repository  --repository-name retailapp/user --force --region $REGION
-aws ecr delete-repository  --repository-name retailapp/webapp --force --region $REGION
+  aws ecr delete-repository  --repository-name retailapp/kart --force --region $REGION
+  aws ecr delete-repository  --repository-name retailapp/order --force --region $REGION
+  aws ecr delete-repository  --repository-name retailapp/pgbouncer --force --region $REGION
+  aws ecr delete-repository  --repository-name retailapp/product --force --region $REGION
+  aws ecr delete-repository  --repository-name retailapp/user --force --region $REGION
+  aws ecr delete-repository  --repository-name retailapp/webapp --force --region $REGION
 done
 
 
