@@ -260,7 +260,7 @@ function deploy_vpc_c9()
 
     wait_for_stack_to_complete "EKSGDB2" "${REGION2}"
 
-    echo "Completed deloying the CloudFormation Stacks on regions us-east-2 and ${REGION2}"
+    echo "Completed deloying the CloudFormation Stacks on regions ${REGION1} and ${REGION2}"
     print_line
 
 }
@@ -546,60 +546,88 @@ function create_global_accelerator()
         return
     fi
 
-    Global_Accelerator_Arn=$(aws globalaccelerator list-accelerators --region ${REGION2} --query 'Accelerators[?(Name == `eksgdb`)].AcceleratorArn' --output text)
+    Global_Accelerator_Arn=$(aws globalaccelerator list-accelerators --region us-west-2 --query 'Accelerators[?(Name == `eksgdb`)].AcceleratorArn' --output text)
 
     if [[ -z ${Global_Accelerator_Arn} ]]; then
-       Global_Accelerator_Arn=$(aws globalaccelerator create-accelerator --name eksgdb --query "Accelerator.AcceleratorArn" --output text --region ${REGION2})
+       Global_Accelerator_Arn=$(aws globalaccelerator create-accelerator --name eksgdb --query "Accelerator.AcceleratorArn" --output text --region us-west-2)
+    fi
+    if [[ -z ${Global_Accelerator_Arn} ]]; then
+       echo "Failed to create global accelerator"
+       exit 1
     fi
 
     echo "Global Accelerator ARN : ${Global_Accelerator_Arn}"
 
-    Global_Accelerator_Listerner_Arn=$(aws globalaccelerator list-listeners --accelerator-arn ${Global_Accelerator_Arn} --query 'Listeners[].ListenerArn' --output text)
+    Global_Accelerator_Listerner_Arn=$(aws globalaccelerator list-listeners --region us-west-2 --accelerator-arn ${Global_Accelerator_Arn} --query 'Listeners[].ListenerArn' --output text)
     if [[ -z ${Global_Accelerator_Listerner_Arn} ]]; then
         Global_Accelerator_Listerner_Arn=$(aws globalaccelerator create-listener \
           --accelerator-arn $Global_Accelerator_Arn \
-          --region ${REGION2} \
+          --region us-west-2 \
           --protocol TCP \
           --port-ranges FromPort=80,ToPort=80 \
           --query "Listener.ListenerArn" \
           --output text)
     fi
+    if [[ -z $Global_Accelerator_Listerner_Arn ]]; then
+        echo "ERROR: Failed to create global accelerator listener"
+        exit 1
+    fi
 
     echo "Global Accelerator Listener ARN : ${Global_Accelerator_Listerner_Arn}"
 
     lname=$(aws elbv2 describe-load-balancers --region $REGION1 --query 'LoadBalancers[?contains(DNSName, `webapp`)].LoadBalancerArn' --output text)
+    if [[ -z $lname ]]; then
+        echo "ERROR: Failed to get load balanncer arn"
+        exit 1
+    fi
     EndpointGroupArn_1=$(aws globalaccelerator create-endpoint-group \
-      --region ${REGION2} \
+      --region us-west-2 \
       --traffic-dial-percentage 100 \
       --listener-arn $Global_Accelerator_Listerner_Arn \
       --endpoint-group-region ${REGION1} \
       --query "EndpointGroup.EndpointGroupArn" \
       --output text \
       --endpoint-configurations EndpointId=$lname,Weight=128,ClientIPPreservationEnabled=True) 
+    if [[ -z $EndpointGroupArn_1 ]]; then
+        echo "ERROR: Failed to create endpoint group"
+        exit 1
+    fi
 
     lname=$(aws elbv2 describe-load-balancers --region $REGION2 --query 'LoadBalancers[?contains(DNSName, `webapp`)].LoadBalancerArn' --output text)
+    if [[ -z $lname ]]; then
+        echo "ERROR: Failed to get load balancer arn"
+        exit 1
+    fi
     EndpointGroupArn_2=$(aws globalaccelerator create-endpoint-group \
-      --region ${REGION2} \
+      --region us-west-2 \
       --traffic-dial-percentage 100 \
       --listener-arn $Global_Accelerator_Listerner_Arn \
       --endpoint-group-region ${REGION2} \
       --query "EndpointGroup.EndpointGroupArn" \
       --output text \
       --endpoint-configurations EndpointId=$lname,Weight=128,ClientIPPreservationEnabled=True) 
+    if [[ -z $EndpointGroupArn_2 ]]; then
+        echo "ERROR: Failed to create endpoint group"
+        exit 1
+    fi
 
     export WEBAPP_GADNS=$(aws globalaccelerator describe-accelerator \
       --accelerator-arn $Global_Accelerator_Arn \
       --query "Accelerator.DnsName" \
-      --output text --region ${REGION2})
+      --output text --region us-west-2)
+    if [[ -z $WEBAPP_GADNS ]]; then
+        echo "ERROR: Failed to get global accelerator dns name"
+        exit 1
+    fi
 
     echo "Global Accelerator DNS Name: $WEBAPP_GADNS"
 
     echo "Checking deployment status"
-    status=$(aws globalaccelerator list-accelerators --query 'Accelerators[?(Name == `eksgdb`)].Status' --output text)
+    status=$(aws globalaccelerator list-accelerators --region us-west-2 --query 'Accelerators[?(Name == `eksgdb`)].Status' --output text)
     while [[ "${status}" != "DEPLOYED" ]]; do
        echo "Global Accelerator deployment status ${status}"
        sleep 60
-       status=$(aws globalaccelerator list-accelerators --query 'Accelerators[?(Name == `eksgdb`)].Status' --output text)
+       status=$(aws globalaccelerator list-accelerators --region us-west-2 --query 'Accelerators[?(Name == `eksgdb`)].Status' --output text)
     done
     echo "Global Accelerator deployment completed. DNS Name: $WEBAPP_GADNS"
 
