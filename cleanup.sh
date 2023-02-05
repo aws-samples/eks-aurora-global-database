@@ -67,11 +67,6 @@ wait
 
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
 
-eksctl delete iamserviceaccount --name aws-load-balancer-controller --cluster eksclu --namespace kube-system --region $REGION1
-eksctl delete iamserviceaccount --name aws-load-balancer-controller --cluster eksclu --namespace kube-system --region $REGION2
-eksctl delete cluster --name eksclu -r ${REGION1} --force -w
-eksctl delete cluster --name eksclu -r ${REGION2} --force -w
-
 aws iam delete-policy --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/k8s-asg-policy
 
 VPCID1=$(aws cloudformation describe-stacks --stack-name EKSGDB1 --region ${REGION1} --query 'Stacks[].Outputs[?(OutputKey == `VPC`)][].{OutputValue:OutputValue}' --output text)
@@ -145,6 +140,8 @@ do
  aws iam delete-role --role-name $role
 done
 
+delete_policies "aurorapgbouncerlambda"
+aws iam delete-role --role-name "aurorapgbouncerlambda"
 aws iam delete-policy --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy
 
 
