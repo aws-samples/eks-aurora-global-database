@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: 'Cloudformation Template DAT312 EKS ACK Controller Workshop'
+Description: 'Cloudformation Template to create EKS cluster'
 
 Metadata:
   'AWS::CloudFormation::Interface':
@@ -472,7 +472,7 @@ Resources:
 Outputs:
   TemplateID:
     Description: 'Template ID'
-    Value: 'DAT312'
+    Value: 'eks-aurora-global-database'
     
   Region:
     Description: 'Region'
