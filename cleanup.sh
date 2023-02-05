@@ -15,6 +15,9 @@ function wait_for_stack_to_complete()
         echo "Stack ${stackname} on region ${region} completed (${status})"
         return
      fi
+     if [[ "${status}" == "DELETE_FAILED" ]]; then
+        aws cloudformation delete-stack --stack-name ${stackname} --region ${region}
+     fi
      echo "${stackname} status ${status} in region ${region}"
      sleep 60
    done
@@ -33,7 +36,8 @@ function delete_policies()
  done
 }
 
-
+function delete_accelerator()
+{
 #delete global accelerator
 accel=$(aws globalaccelerator list-accelerators --region us-west-2 --query 'Accelerators[?(Name == `eksgdb`)].AcceleratorArn' --output text)
 lsnrarn=$(aws globalaccelerator list-listeners --accelerator-arn  $accel --region us-west-2 --query 'Listeners[].ListenerArn' --output text)
@@ -53,6 +57,13 @@ done
 
 aws globalaccelerator  delete-listener --listener-arn $lsnrarn --region us-west-2
 aws globalaccelerator  delete-accelerator --accelerator-arn $accel --region us-west-2
+}
+
+delete_accelerator
+delete_accelerator
+
+echo "Deleted accelerator, enter to continue"
+wait
 
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
 
@@ -84,6 +95,9 @@ do
   aws ecr delete-repository  --repository-name retailapp/webapp --force --region $REGION
 done
 
+aws lambda delete-function --function-name AuroraGDBPgbouncerUpdate
+aws events remove-targets --rule AuroraGDBPgbouncerUpdate --ids "1"
+aws events delete-rule --name AuroraGDBPgbouncerUpdate
 
 FAILARN=$(aws rds describe-global-clusters --query 'GlobalClusters[?(GlobalClusterIdentifier == `agdbtest`)].GlobalClusterMembers[]' | jq '.[] | select(.IsWriter == false) | .DBClusterArn'| sed -e 's/"//g')
 PRIMARN=$(aws rds describe-global-clusters --query 'GlobalClusters[?(GlobalClusterIdentifier == `agdbtest`)].GlobalClusterMembers[]' | jq '.[] | select(.IsWriter == true) | .DBClusterArn'| sed -e 's/"//g')
@@ -104,9 +118,11 @@ fi
 aws cloudformation delete-stack --stack-name EKSGDB2 --region ${REGION2}
 wait_for_stack_to_complete "EKSGDB2" "${REGION2}"
 
-aws lambda delete-function --function-name AuroraGDBPgbouncerUpdate
-aws events remove-targets --rule AuroraGDBPgbouncerUpdate --ids "1"
-aws events delete-rule --name AuroraGDBPgbouncerUpdate
+aws cloudformation delete-stack --stack-name auroragdbeks --region ${REGION2}
+wait_for_stack_to_complete "auroragdbeks" "${REGION2}"
+
+aws cloudformation delete-stack --stack-name auroragdbeks --region ${REGION1}
+wait_for_stack_to_complete "auroragdbeks" "${REGION1}"
 
 for role in `aws iam list-roles --query 'Roles[?starts_with(RoleName, \`auroragdbeks-ACKGrantsRole\`) == \`true\`].RoleName' --region $REGION1 --output text`
 do
@@ -132,11 +148,6 @@ done
 aws iam delete-policy --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy
 
 
-aws cloudformation delete-stack --stack-name auroragdbeks --region ${REGION2}
-wait_for_stack_to_complete "auroragdbeks" "${REGION2}"
-
-aws cloudformation delete-stack --stack-name auroragdbeks --region ${REGION1}
-wait_for_stack_to_complete "auroragdbeks" "${REGION1}"
 
 for s3buck in `aws s3api list-buckets --query 'Buckets[?starts_with(Name, \`eksgdb1-c9outputbucket\`)].Name' --output text`
 do
