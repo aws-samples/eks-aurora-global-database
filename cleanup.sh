@@ -59,6 +59,8 @@ aws globalaccelerator  delete-listener --listener-arn $lsnrarn --region us-west-
 aws globalaccelerator  delete-accelerator --accelerator-arn $accel --region us-west-2
 }
 
+echo "!!Important Note!! If you don't interact with AWS CloudShell using your keyboard or pointer, your shell session automatically ends after approximately 20–30 minutes."
+
 delete_accelerator
 delete_accelerator
 
@@ -153,8 +155,8 @@ do
 done
 
 aws cloudformation delete-stack --stack-name EKSGDB1 --region ${REGION2}
-wait_for_stack_to_complete "EKSGDB1" "${REGION2}"
 aws cloudformation delete-stack --stack-name EKSGDB1 --region ${REGION1}
+wait_for_stack_to_complete "EKSGDB1" "${REGION2}"
 wait_for_stack_to_complete "EKSGDB1" "${REGION1}"
 
 for role in `aws iam list-roles --query 'Roles[?starts_with(RoleName, \`EKSGDB1-C9Role-\`) == \`true\`].RoleName' --region $REGION1 --output text`
