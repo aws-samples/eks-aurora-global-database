@@ -31,6 +31,14 @@ function install_packages()
     unzip -o awscliv2.zip > ${TERM1} 2>&1
     sudo ./aws/install --update > ${TERM1} 2>&1
     cd $current_dir
+
+    print_line
+    echo "Increasing size of the cloud9 storage"
+    print_line
+
+    curl -s https://raw.githubusercontent.com/aws-samples/aws-swb-cloud9-init/mainline/cloud9-resize.sh > /tmp/cloud9-resize.sh
+    chmod +x /tmp/cloud9-resize.sh
+    /tmp/cloud9-resize.sh
 }
 
 function install_k8s_utilities()
@@ -213,13 +221,6 @@ function wait_for_stack_to_complete()
 function deploy_vpc_c9()
 {
 
-    print_line
-    echo "Increasing size of the cloud9 storage"
-    print_line
-
-    curl -s https://raw.githubusercontent.com/aws-samples/aws-swb-cloud9-init/mainline/cloud9-resize.sh > /tmp/cloud9-resize.sh
-    chmod +x /tmp/cloud9-resize.sh
-    /tmp/cloud9-resize.sh
 
     print_line
     echo "Deploying VPC and C9 environment"
