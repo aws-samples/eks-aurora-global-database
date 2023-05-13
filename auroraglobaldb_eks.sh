@@ -18,6 +18,14 @@ function install_jq()
 function install_packages()
 {
     print_line
+    echo "Increasing size of the cloud9 storage"
+    print_line
+
+    curl -s https://raw.githubusercontent.com/aws-samples/aws-swb-cloud9-init/mainline/cloud9-resize.sh > /tmp/cloud9-resize.sh
+    chmod +x /tmp/cloud9-resize.sh
+    /tmp/cloud9-resize.sh
+
+    print_line
     echo "Installing aws cli v2"
     print_line
     current_dir=`pwd`
@@ -32,13 +40,6 @@ function install_packages()
     sudo ./aws/install --update > ${TERM1} 2>&1
     cd $current_dir
 
-    print_line
-    echo "Increasing size of the cloud9 storage"
-    print_line
-
-    curl -s https://raw.githubusercontent.com/aws-samples/aws-swb-cloud9-init/mainline/cloud9-resize.sh > /tmp/cloud9-resize.sh
-    chmod +x /tmp/cloud9-resize.sh
-    /tmp/cloud9-resize.sh
 }
 
 function install_k8s_utilities()
