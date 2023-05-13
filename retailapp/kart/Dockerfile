@@ -1,4 +1,4 @@
-FROM amazonlinux:latest
+FROM amazonlinux:2
 
 ENV DATABASE_HOST="xyz.com"
 ENV DATABASE_USER="xyzuser"

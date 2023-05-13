@@ -59,15 +59,10 @@ Parameters:
   DBEngineVersion:
     Description: Select Database Engine Version
     Type: String
-    Default: 13.3
+    Default: 14.6
     AllowedValues:
-      - 10.16
-      - 10.17
-      - 11.11
-      - 11.12
-      - 12.6
-      - 12.7
-      - 13.3
+      - 13.7
+      - 14.6
 
   Application:
     Description: 'Specify Application Name'

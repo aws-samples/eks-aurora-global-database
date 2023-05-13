@@ -1,4 +1,4 @@
-FROM amazonlinux:latest
+FROM amazonlinux:2
 
 ENV PGBOUNCER_VERSION="1.17.0"
 ENV DBUSER=${DBUSER:-postgres}
