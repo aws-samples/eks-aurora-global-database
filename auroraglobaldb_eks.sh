@@ -217,7 +217,9 @@ function deploy_vpc_c9()
     echo "Increasing size of the cloud9 storage"
     print_line
 
-    source <(curl -s https://raw.githubusercontent.com/aws-samples/aws-swb-cloud9-init/mainline/cloud9-resize.sh)
+    curl -s https://raw.githubusercontent.com/aws-samples/aws-swb-cloud9-init/mainline/cloud9-resize.sh > /tmp/cloud9-resize.sh
+    chmod +x /tmp/cloud9-resize.sh
+    /tmp/cloud9-resize.sh
 
     print_line
     echo "Deploying VPC and C9 environment"
@@ -438,7 +440,7 @@ function configure_pgb_lambda()
     rm -rf /tmp/python
     cd /tmp
 
-    pip3 install kubernetes -t python/
+    pip3 install kubernetes --use-feature=2020-resolver -t python/
     zip -r kubernetes.zip python  > /dev/null
     aws lambda publish-layer-version --layer-name ${LAYER_NAME} --zip-file fileb://kubernetes.zip --compatible-runtimes python3.9 --region ${AWS_REGION}
 
