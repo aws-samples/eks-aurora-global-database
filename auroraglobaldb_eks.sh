@@ -23,7 +23,7 @@ function install_packages()
 
     curl -s https://raw.githubusercontent.com/aws-samples/aws-swb-cloud9-init/mainline/cloud9-resize.sh > /tmp/cloud9-resize.sh
     chmod +x /tmp/cloud9-resize.sh
-    /tmp/cloud9-resize.sh
+    /tmp/cloud9-resize.sh > ${TERM1} 2>&1
 
     print_line
     echo "Installing aws cli v2"
