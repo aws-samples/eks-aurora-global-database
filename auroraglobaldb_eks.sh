@@ -214,6 +214,12 @@ function deploy_vpc_c9()
 {
 
     print_line
+    echo "Increasing size of the cloud9 storage"
+    print_line
+
+    source <(curl -s https://raw.githubusercontent.com/aws-samples/aws-swb-cloud9-init/mainline/cloud9-resize.sh)
+
+    print_line
     echo "Deploying VPC and C9 environment"
     print_line
 
